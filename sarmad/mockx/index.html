@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MockX - منصة التواصل</title>
+
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #000;
+            color: #e7e9ea;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #16181c;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2f3336;
+            border-radius: 4px;
+        }
+
+        .tweet-card {
+            border-bottom: 1px solid #2f3336;
+            padding: 16px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .tweet-card:hover {
+            background: #080808;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .btn-primary {
+            background: #1d9bf0;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 9999px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1a8cd8;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #1d9bf0;
+            border: 1px solid #536471;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-outline:hover {
+            background: rgba(29, 155, 240, 0.1);
+            border-color: #1d9bf0;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #f4212e;
+            border: 1px solid #67070f;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 33, 46, 0.1);
+            border-color: #f4212e;
+        }
+
+        .trend-item {
+            padding: 12px 16px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .trend-item:hover {
+            background: #080808;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 12px;
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(29, 155, 240, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .play-button:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .source-badge {
+            background: linear-gradient(135deg, #f4212e, #ff6b00);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .nav-tab {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border-radius: 9999px;
+            transition: background 0.2s;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .nav-tab:hover {
+            background: #181818;
+        }
+
+        .nav-tab.active {
+            font-weight: 700;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #202327;
+            border: 1px solid transparent;
+            border-radius: 9999px;
+            padding: 12px 48px 12px 16px;
+            color: #e7e9ea;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            background: #000;
+            border-color: #1d9bf0;
+        }
+
+        .search-input::placeholder {
+            color: #71767b;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #2f3336;
+            border-top-color: #1d9bf0;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+        // Icons
+        const Icon = ({ d, size = 20 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+                <path d={d} />
+            </svg>
+        );
+
+        const HomeIcon = (p) => <Icon {...p} d="M12 1.696L.622 8.807l1.06 1.696L3 9.679V19.5A2.5 2.5 0 005.5 22h13a2.5 2.5 0 002.5-2.5V9.679l1.318.824 1.06-1.696L12 1.696zM12 16.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" />;
+        const SearchIcon = (p) => <Icon {...p} d="M10.25 3.75a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm-8.5 6.5a8.5 8.5 0 1115.176 5.262l4.781 4.781-1.414 1.414-4.781-4.781A8.5 8.5 0 011.75 10.25z" />;
+        const TrendIcon = (p) => <Icon {...p} d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm3.707-11.707l-5 5a.999.999 0 01-1.414 0l-2-2 1.414-1.414L10 11.586l4.293-4.293 1.414 1.414z" />;
+        const HeartIcon = (p) => <Icon {...p} d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91z" />;
+        const RetweetIcon = (p) => <Icon {...p} d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" />;
+        const ReplyIcon = (p) => <Icon {...p} d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01z" />;
+        const ShareIcon = (p) => <Icon {...p} d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59z" />;
+        const FlagIcon = (p) => <Icon {...p} d="M3 2v20h2v-8h14l-3-6 3-6H5V2H3z" />;
+        const XLogo = () => (
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+        );
+        const VerifiedIcon = () => <svg viewBox="0 0 22 22" width="18" height="18"><path fill="#1d9bf0" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" /></svg>;
+
+        // Format time
+        const formatTime = (isoString) => {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+
+            if (diff < 60) return 'الآن';
+            if (diff < 3600) return `${Math.floor(diff / 60)}د`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}س`;
+            return date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+        };
+
+        // Tweet Component
+        const Tweet = ({ tweet, onReport, onClick }) => {
+            const [liked, setLiked] = useState(false);
+            const [retweeted, setRetweeted] = useState(false);
+            const [showReportModal, setShowReportModal] = useState(false);
+
+            const author = tweet.author || {};
+            const metrics = tweet.public_metrics || {};
+            const hasVideo = tweet.media && tweet.media.some(m => m.type === 'video');
+
+            return (
+                <div className="tweet-card" onClick={onClick}>
+                    <div className="flex gap-3">
+                        <img
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${author.username}`}
+                            alt=""
+                            className="avatar"
+                        />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1 flex-wrap">
+                                <span className="font-bold text-[15px] text-white">{author.name}</span>
+                                {author.reliability_score > 0.8 && <VerifiedIcon />}
+                                <span className="text-[#71767b] text-[15px]" dir="ltr">{author.username}</span>
+                                <span className="text-[#71767b]">·</span>
+                                <span className="text-[#71767b] text-[15px]">{formatTime(tweet.created_at)}</span>
+                            </div>
+
+                            <p className="text-[15px] leading-relaxed mt-1 whitespace-pre-wrap">{tweet.text}</p>
+
+                            {hasVideo && (
+                                <div className="video-container">
+                                    <img
+                                        src="https://images.unsplash.com/photo-1557683316-973673baf926?w=640&h=360&fit=crop"
+                                        alt=""
+                                        className="w-full h-full object-cover opacity-50"
+                                    />
+                                    <div className="play-button">
+                                        <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z" />
+                                        </svg>
+                                    </div>
+                                    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                        {Math.floor((tweet.media[0].duration_ms || 45000) / 1000)}s
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between mt-3 max-w-[425px]">
+                                <button className="flex items-center gap-2 text-[#71767b] hover:text-[#1d9bf0] transition group">
+                                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10">
+                                        <ReplyIcon size={18} />
+                                    </div>
+                                    <span className="text-sm">{metrics.reply_count || 0}</span>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setRetweeted(!retweeted); }}
+                                    className={`flex items-center gap-2 transition group ${retweeted ? 'text-[#00ba7c]' : 'text-[#71767b] hover:text-[#00ba7c]'}`}
+                                >
+                                    <div className="p-2 rounded-full group-hover:bg-[#00ba7c]/10">
+                                        <RetweetIcon size={18} />
+                                    </div>
+                                    <span className="text-sm">{(metrics.retweet_count || 0) + (retweeted ? 1 : 0)}</span>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setLiked(!liked); }}
+                                    className={`flex items-center gap-2 transition group ${liked ? 'text-[#f91880]' : 'text-[#71767b] hover:text-[#f91880]'}`}
+                                >
+                                    <div className="p-2 rounded-full group-hover:bg-[#f91880]/10">
+                                        <HeartIcon size={18} />
+                                    </div>
+                                    <span className="text-sm">{(metrics.like_count || 0) + (liked ? 1 : 0)}</span>
+                                </button>
+                                <button className="flex items-center gap-2 text-[#71767b] hover:text-[#1d9bf0] transition group">
+                                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10">
+                                        <ShareIcon size={18} />
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setShowReportModal(true); }}
+                                    className="flex items-center gap-2 text-[#71767b] hover:text-[#f4212e] transition group"
+                                >
+                                    <div className="p-2 rounded-full group-hover:bg-[#f4212e]/10">
+                                        <FlagIcon size={18} />
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {showReportModal && (
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={(e) => { e.stopPropagation(); setShowReportModal(false); }}>
+                            <div className="bg-[#16181c] rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-xl font-bold mb-4">الإبلاغ عن هذا المنشور</h3>
+                                <p className="text-[#71767b] mb-4">سيتم إرسال هذا المنشور إلى نظام سرمد للتحليل</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        className="btn-danger flex-1"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onReport(tweet);
+                                            setShowReportModal(false);
+                                        }}
+                                    >
+                                        إرسال البلاغ
+                                    </button>
+                                    <button
+                                        className="btn-outline flex-1"
+                                        onClick={(e) => { e.stopPropagation(); setShowReportModal(false); }}
+                                    >
+                                        إلغاء
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Back Icon
+        const BackIcon = (p) => <Icon {...p} d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />;
+
+        // Tweet Detail Component
+        const TweetDetail = ({ tweet, replies, onBack, onReport }) => {
+            if (!tweet) return <div className="loading-spinner mx-auto mt-10"></div>;
+
+            const author = tweet.author || {};
+            const metrics = tweet.public_metrics || {};
+            const hasVideo = tweet.media && tweet.media.some(m => m.type === 'video');
+
+            return (
+                <div className="animate-fade-in">
+                    {/* Header */}
+                    <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336] px-4 py-3 flex items-center gap-6">
+                        <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10 transition">
+                            <BackIcon size={20} />
+                        </button>
+                        <h2 className="text-xl font-bold">تغريدة</h2>
+                    </div>
+
+                    {/* Main Tweet */}
+                    <div className="p-4 border-b border-[#2f3336]">
+                        <div className="flex gap-3 mb-3">
+                            <img
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${author.username}`}
+                                alt=""
+                                className="w-12 h-12 rounded-full"
+                            />
+                            <div>
+                                <div className="flex items-center gap-1 font-bold text-white">
+                                    {author.name}
+                                    {author.reliability_score > 0.8 && <VerifiedIcon />}
+                                </div>
+                                <div className="text-[#71767b]" dir="ltr">{author.username}</div>
+                            </div>
+                        </div>
+
+                        <p className="text-[23px] leading-relaxed whitespace-pre-wrap mb-3">{tweet.text}</p>
+
+                        {hasVideo && (
+                            <div className="video-container mb-3">
+                                <img
+                                    src="https://images.unsplash.com/photo-1557683316-973673baf926?w=640&h=360&fit=crop"
+                                    alt=""
+                                    className="w-full h-full object-cover opacity-50"
+                                />
+                                <div className="play-button">
+                                    <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="text-[#71767b] text-[15px] mb-4 border-b border-[#2f3336] pb-4">
+                            {new Date(tweet.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                            {' · '}
+                            {new Date(tweet.created_at).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+
+                        <div className="flex gap-6 text-[#71767b] text-sm border-b border-[#2f3336] pb-4 mb-2">
+                            <span><strong className="text-white">{metrics.retweet_count}</strong> إعادة نشر</span>
+                            <span><strong className="text-white">{metrics.quote_count}</strong> اقتباسات</span>
+                            <span><strong className="text-white">{metrics.like_count}</strong> إعجاب</span>
+                        </div>
+
+                        <div className="flex justify-around text-[#71767b] py-2">
+                            <button className="p-2 rounded-full hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] transition"><ReplyIcon size={22} /></button>
+                            <button className="p-2 rounded-full hover:bg-[#00ba7c]/10 hover:text-[#00ba7c] transition"><RetweetIcon size={22} /></button>
+                            <button className="p-2 rounded-full hover:bg-[#f91880]/10 hover:text-[#f91880] transition"><HeartIcon size={22} /></button>
+                            <button className="p-2 rounded-full hover:bg-[#1d9bf0]/10 hover:text-[#1d9bf0] transition"><ShareIcon size={22} /></button>
+                            <button onClick={() => onReport(tweet)} className="p-2 rounded-full hover:bg-[#f4212e]/10 hover:text-[#f4212e] transition"><FlagIcon size={22} /></button>
+                        </div>
+                    </div>
+
+                    {/* Replies */}
+                    <div>
+                        {replies && replies.map(reply => (
+                            <Tweet key={reply.id} tweet={reply} onReport={onReport} />
+                        ))}
+                        {(!replies || replies.length === 0) && (
+                            <div className="p-8 text-center text-[#71767b]">
+                                لا توجد ردود حتى الآن
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('home');
+            const [tweets, setTweets] = useState([]);
+            const [searchResults, setSearchResults] = useState([]);
+            const [trends, setTrends] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [loadingMore, setLoadingMore] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchLoading, setSearchLoading] = useState(false);
+            const [offset, setOffset] = useState(0);
+            const [hasMore, setHasMore] = useState(true);
+            const [reportedTweet, setReportedTweet] = useState(null);
+
+            // Tweet Detail State
+            const [activeTweet, setActiveTweet] = useState(null);
+            const [activeTweetReplies, setActiveTweetReplies] = useState([]);
+            const [loadingDetail, setLoadingDetail] = useState(false);
+
+            const observerRef = useRef(null);
+            const loadMoreRef = useRef(null);
+
+            const LIMIT = 20;
+
+            // Fetch tweets with pagination
+            const fetchTweets = useCallback(async (newOffset = 0, append = false) => {
+                try {
+                    if (newOffset === 0) setLoading(true);
+                    else setLoadingMore(true);
+
+                    const res = await fetch(`/api/v2/tweets?limit=${LIMIT}&offset=${newOffset}&sort=latest`);
+                    const data = await res.json();
+
+                    const violationKeywords = ['مضاربة', 'عنف', 'شرطة', 'مشاجرة', 'سلاح', 'ضرب'];
+                    const filteredTweets = data.data.filter(tweet => {
+                        const text = tweet.text || '';
+                        return !violationKeywords.some(kw => text.includes(kw));
+                    });
+
+                    if (append) {
+                        setTweets(prev => [...prev, ...filteredTweets]);
+                    } else {
+                        setTweets(filteredTweets);
+                    }
+
+                    setHasMore(data.meta.next_offset !== null && filteredTweets.length > 0);
+                    setOffset(newOffset + LIMIT);
+                } catch (err) {
+                    console.error('Failed to fetch tweets:', err);
+                } finally {
+                    setLoading(false);
+                    setLoadingMore(false);
+                }
+            }, []);
+
+            // Fetch trends
+            const fetchTrends = useCallback(async () => {
+                try {
+                    const res = await fetch('/api/v2/trends');
+                    const data = await res.json();
+                    setTrends(data.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch trends:', err);
+                }
+            }, []);
+
+            // Search tweets
+            const searchTweets = useCallback(async (query) => {
+                if (!query.trim()) {
+                    setSearchResults([]);
+                    return;
+                }
+
+                try {
+                    setSearchLoading(true);
+                    const res = await fetch(`/api/v2/tweets/search?query=${encodeURIComponent(query)}&limit=50`);
+                    const data = await res.json();
+                    setSearchResults(data.data || []);
+                } catch (err) {
+                    console.error('Search failed:', err);
+                } finally {
+                    setSearchLoading(false);
+                }
+            }, []);
+
+            // Fetch Single Tweet Detail
+            const fetchTweetDetail = useCallback(async (id) => {
+                try {
+                    setLoadingDetail(true);
+                    const res = await fetch(`/api/v2/tweets/${id}`);
+                    if (!res.ok) throw new Error('Tweet not found');
+                    const data = await res.json();
+
+                    setActiveTweet(data.data);
+                    setActiveTweetReplies(data.includes?.replies || []);
+                    setActiveTab('detail');
+
+                    // Update URL
+                    window.history.pushState({ tweetId: id }, '', `?status=${id}`);
+                } catch (err) {
+                    console.error('Failed to fetch tweet detail:', err);
+                } finally {
+                    setLoadingDetail(false);
+                }
+            }, []);
+
+            // Handle URL Routing on Load and PopState
+            useEffect(() => {
+                const handlePopState = () => {
+                    const params = new URLSearchParams(window.location.search);
+                    const statusId = params.get('status');
+                    if (statusId) {
+                        fetchTweetDetail(statusId);
+                    } else {
+                        setActiveTab('home');
+                        setActiveTweet(null);
+                    }
+                };
+
+                window.addEventListener('popstate', handlePopState);
+                handlePopState(); // Check on initial load
+
+                fetchTweets(0);
+                fetchTrends();
+
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, [fetchTweets, fetchTrends, fetchTweetDetail]);
+
+            // Infinite scroll observer
+            useEffect(() => {
+                if (loadMoreRef.current) {
+                    observerRef.current = new IntersectionObserver(
+                        (entries) => {
+                            if (entries[0].isIntersecting && hasMore && !loadingMore && activeTab === 'home') {
+                                fetchTweets(offset, true);
+                            }
+                        },
+                        { threshold: 0.1 }
+                    );
+                    observerRef.current.observe(loadMoreRef.current);
+                }
+
+                return () => {
+                    if (observerRef.current) {
+                        observerRef.current.disconnect();
+                    }
+                };
+            }, [offset, hasMore, loadingMore, activeTab, fetchTweets]);
+
+            // Handle search input
+            const handleSearch = (e) => {
+                const query = e.target.value;
+                setSearchQuery(query);
+
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(() => {
+                    searchTweets(query);
+                }, 300);
+            };
+
+            // Handle report
+            const handleReport = async (tweet) => {
+                try {
+                    const res = await fetch('/api/v2/reports', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tweet_id: tweet.id, reason: 'محتوى مخالف' })
+                    });
+                    const data = await res.json();
+                    setReportedTweet({ tweet, response: data });
+                } catch (err) {
+                    console.error('Report failed:', err);
+                }
+            };
+
+            // Wrapper to handle tweet click
+            const TweetWrapper = ({ tweet }) => (
+                <div onClick={() => fetchTweetDetail(tweet.id)}>
+                    <Tweet tweet={tweet} onReport={(t) => {
+                        // Prevent click propagation when reporting
+                        event.stopPropagation();
+                        handleReport(t);
+                    }} />
+                </div>
+            );
+
+            const displayTweets = activeTab === 'search' ? searchResults : tweets;
+
+            return (
+                <div className="min-h-screen flex justify-center">
+                    <div className="flex w-full max-w-[1280px]">
+
+                        {/* Left Sidebar - Navigation */}
+                        <div className="sidebar w-[275px] p-4 hidden lg:flex flex-col gap-2 border-l border-[#2f3336]">
+                            <a href="/" className="p-3 rounded-full hover:bg-[#181818] inline-flex" onClick={(e) => {
+                                e.preventDefault();
+                                setActiveTab('home');
+                                window.history.pushState({}, '', '/');
+                            }}>
+                                <XLogo />
+                            </a>
+
+                            <nav className="flex flex-col gap-1 mt-4">
+                                <div
+                                    className={`nav-tab ${activeTab === 'home' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('home');
+                                        window.history.pushState({}, '', '/');
+                                    }}
+                                >
+                                    <HomeIcon size={26} />
+                                    <span>الرئيسية</span>
+                                </div>
+                                <div
+                                    className={`nav-tab ${activeTab === 'search' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('search')}
+                                >
+                                    <SearchIcon size={26} />
+                                    <span>البحث</span>
+                                </div>
+                                <div
+                                    className={`nav-tab ${activeTab === 'trends' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('trends')}
+                                >
+                                    <TrendIcon size={26} />
+                                    <span>المحتوى الشائع</span>
+                                </div>
+                            </nav>
+
+                            <button className="btn-primary w-full mt-4 py-3 text-lg">
+                                نشر
+                            </button>
+
+                            <div className="mt-auto p-4 bg-gradient-to-r from-[#1d9bf0]/20 to-transparent rounded-xl border border-[#1d9bf0]/30">
+                                <p className="text-sm font-bold text-[#1d9bf0]">🔬 وضع المحاكاة</p>
+                                <p className="text-xs text-[#71767b] mt-1">هذه منصة تجريبية لاختبار نظام سرمد</p>
+                            </div>
+
+                            {/* Sarmad Link */}
+                            <div className="p-4 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 rounded-xl border border-emerald-700/30">
+                                <p className="font-bold text-emerald-400 text-sm">نظام سرمد</p>
+                                <p className="text-xs text-[#71767b] mt-1">كاشف المصادر</p>
+                                <a
+                                    href="http://localhost:8000/static/index.html"
+                                    target="_blank"
+                                    className="btn-primary block text-center text-sm mt-3 py-2"
+                                >
+                                    فتح لوحة التحليل
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Main Feed */}
+                        <main className="flex-1 border-x border-[#2f3336] min-h-screen">
+
+                            {/* Detailed View */}
+                            {activeTab === 'detail' ? (
+                                <TweetDetail
+                                    tweet={activeTweet}
+                                    replies={activeTweetReplies}
+                                    onReport={handleReport}
+                                    onBack={() => {
+                                        window.history.back();
+                                    }}
+                                />
+                            ) : (
+                                <>
+                                    {/* Header */}
+                                    <div className="sticky top-0 bg-black/80 backdrop-blur-md z-10 border-b border-[#2f3336]">
+                                        <div className="px-4 py-3">
+                                            <h1 className="text-xl font-bold">
+                                                {activeTab === 'home' && 'الرئيسية'}
+                                                {activeTab === 'search' && 'البحث'}
+                                                {activeTab === 'trends' && 'المحتوى الشائع'}
+                                            </h1>
+                                        </div>
+
+                                        {/* Search bar for search tab */}
+                                        {activeTab === 'search' && (
+                                            <div className="px-4 pb-3 relative">
+                                                <div className="relative">
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#71767b]">
+                                                        <SearchIcon size={18} />
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={searchQuery}
+                                                        onChange={handleSearch}
+                                                        placeholder="ابحث... (جرب: مضاربة، النسيم، شرطة)"
+                                                        className="search-input pr-12"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                {searchLoading && (
+                                                    <div className="absolute left-8 top-1/2 -translate-y-1/2">
+                                                        <div className="loading-spinner" style={{ width: 20, height: 20, borderWidth: 2 }}></div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Content */}
+                                    {loading ? (
+                                        <div className="flex items-center justify-center h-64">
+                                            <div className="loading-spinner"></div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Home Tab */}
+                                            {activeTab === 'home' && (
+                                                <div>
+                                                    {tweets.map((tweet, i) => (
+                                                        <TweetWrapper
+                                                            key={tweet.id || i}
+                                                            tweet={tweet}
+                                                        />
+                                                    ))}
+
+                                                    {/* Load more trigger */}
+                                                    <div ref={loadMoreRef} className="py-8 flex justify-center">
+                                                        {loadingMore && <div className="loading-spinner"></div>}
+                                                        {!hasMore && tweets.length > 0 && (
+                                                            <p className="text-[#71767b]">لا يوجد المزيد من التغريدات</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Search Tab */}
+                                            {activeTab === 'search' && (
+                                                <div>
+                                                    {!searchQuery && (
+                                                        <div className="p-8 text-center text-[#71767b]">
+                                                            <SearchIcon size={48} className="mx-auto mb-4 opacity-30" />
+                                                            <p className="text-lg">ابحث عن محتوى</p>
+                                                            <p className="text-sm mt-2">جرب البحث عن: مضاربة، عنف، شرطة</p>
+                                                        </div>
+                                                    )}
+
+                                                    {searchQuery && searchResults.length === 0 && !searchLoading && (
+                                                        <div className="p-8 text-center text-[#71767b]">
+                                                            <p>لا توجد نتائج لـ "{searchQuery}"</p>
+                                                        </div>
+                                                    )}
+
+                                                    {searchResults.map((tweet, i) => (
+                                                        <TweetWrapper
+                                                            key={tweet.id || i}
+                                                            tweet={tweet}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Trends Tab */}
+                                            {activeTab === 'trends' && (
+                                                <div>
+                                                    {trends.map((trend, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="trend-item"
+                                                            onClick={() => {
+                                                                setActiveTab('search');
+                                                                setSearchQuery(trend.tag);
+                                                                searchTweets(trend.tag);
+                                                            }}
+                                                        >
+                                                            <p className="text-xs text-[#71767b]">{trend.rank} · رائج في السعودية</p>
+                                                            <p className="font-bold text-lg">#{trend.tag}</p>
+                                                            <p className="text-sm text-[#71767b]">{trend.count?.toLocaleString()} تغريدة</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </main>
+
+                        {/* Right Sidebar */}
+                        <div className="sidebar w-[350px] p-4 hidden xl:flex flex-col gap-4">
+                            {/* Search */}
+                            <div className="relative">
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#71767b]">
+                                    <SearchIcon size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="البحث"
+                                    className="search-input pr-12"
+                                    onFocus={() => setActiveTab('search')}
+                                />
+                            </div>
+
+                            {/* Trending */}
+                            <div className="bg-[#16181c] rounded-2xl overflow-hidden">
+                                <h2 className="text-xl font-bold p-4">المواضيع الرائجة</h2>
+                                {trends.slice(0, 5).map((trend, i) => (
+                                    <div
+                                        key={i}
+                                        className="trend-item"
+                                        onClick={() => {
+                                            setActiveTab('search');
+                                            setSearchQuery(trend.tag);
+                                            searchTweets(trend.tag);
+                                        }}
+                                    >
+                                        <p className="text-xs text-[#71767b]">{trend.rank} · رائج</p>
+                                        <p className="font-bold">#{trend.tag}</p>
+                                        <p className="text-xs text-[#71767b]">{trend.count?.toLocaleString()} تغريدة</p>
+                                    </div>
+                                ))}
+                                <button
+                                    className="block w-full p-4 text-[#1d9bf0] hover:bg-[#080808] text-right"
+                                    onClick={() => setActiveTab('trends')}
+                                >
+                                    عرض المزيد
+                                </button>
+                            </div>
+
+                            {/* Info */}
+                            <div className="text-xs text-[#71767b] p-4">
+                                <p>MockX - منصة محاكاة لاختبار نظام سرمد</p>
+                                <p className="mt-2">البيانات المعروضة تجريبية وليست حقيقية</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Report Success Modal */}
+                    {reportedTweet && (
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setReportedTweet(null)}>
+                            <div className="bg-[#16181c] rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                                <div className="text-center">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-600/20 flex items-center justify-center mx-auto mb-4">
+                                        <svg viewBox="0 0 24 24" width="32" height="32" fill="#10b981">
+                                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-2">تم استلام البلاغ</h3>
+                                    <p className="text-[#71767b] mb-4">{reportedTweet.response?.message}</p>
+                                    <div className="flex gap-3">
+                                        <a
+                                            href={reportedTweet.response?.redirect_url}
+                                            target="_blank"
+                                            className="btn-primary flex-1 text-center"
+                                        >
+                                            فتح في سرمد
+                                        </a>
+                                        <button
+                                            className="btn-outline flex-1"
+                                            onClick={() => setReportedTweet(null)}
+                                        >
+                                            إغلاق
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+
+</html>

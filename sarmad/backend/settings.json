@@ -1,0 +1,6 @@
+{
+    "include_violated_content": true,
+    "event_tweets_count": 2500,
+    "daily_tweets_count": 1000,
+    "violated_content_location": "النسيم"
+}

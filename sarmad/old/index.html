@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كاشف | محاكاة كشف المصدر</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Prop-types (Required for Recharts) -->
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+
+    <!-- Recharts (Stable UMD Version) -->
+    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        .animate-pulse-fast {
+            animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // Ensure Recharts is loaded, fallback to empty object to prevent crash if network fails
+        const Recharts = window.Recharts || {};
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } = Recharts;
+        
+        // --- Custom Icon Components (Replacing external dependency to fix React errors) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Shield = (props) => (
+            <IconBase {...props}>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </IconBase>
+        );
+        const Activity = (props) => (
+            <IconBase {...props}>
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </IconBase>
+        );
+        const Terminal = (props) => (
+            <IconBase {...props}>
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+            </IconBase>
+        );
+        const Clock = (props) => (
+            <IconBase {...props}>
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </IconBase>
+        );
+        const Hash = (props) => (
+            <IconBase {...props}>
+                <line x1="4" y1="9" x2="20" y2="9" />
+                <line x1="4" y1="15" x2="20" y2="15" />
+                <line x1="10" y1="3" x2="8" y2="21" />
+                <line x1="16" y1="3" x2="14" y2="21" />
+            </IconBase>
+        );
+        const Search = (props) => (
+            <IconBase {...props}>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </IconBase>
+        );
+        const Users = (props) => (
+            <IconBase {...props}>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </IconBase>
+        );
+        const Target = (props) => (
+            <IconBase {...props}>
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" />
+            </IconBase>
+        );
+
+        // --- Mock Data Generators ---
+
+        const generateMockData = () => {
+            const posts = [];
+            const hours = 24;
+            const eventStartHour = 14; 
+            const peakHour = 16; 
+
+            posts.push({
+                id: 'src-001',
+                user: '@fahad_ghost_99',
+                name: 'فهد | لا للمدرسة',
+                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+                content: 'شوفوا وش صار اليوم عند المدرسة 😂🔥 المدرس أكل ضرب مو طبيعي! #مضاربة_النسيم',
+                mediaType: 'video',
+                timestamp: eventStartHour * 60 + 15,
+                isSource: true,
+                likes: 12,
+                retweets: 2,
+                type: 'source'
+            });
+
+            posts.push({
+                id: 'amp-001',
+                user: '@news_urgent_ksa',
+                name: 'أخبار عاجلة',
+                avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=News',
+                content: 'تداول مقطع فيديو لمشاجرة عنيفة في أحد أحياء شرق الرياض.. الجهات المعنية تباشر.',
+                timestamp: eventStartHour * 60 + 45,
+                isSource: false,
+                likes: 540,
+                retweets: 200,
+                type: 'amplifier'
+            });
+
+            for (let i = 0; i < 150; i++) {
+                let hour = Math.floor(Math.random() * (24 - eventStartHour)) + eventStartHour;
+                let minute = Math.floor(Math.random() * 60);
+                
+                if (Math.random() > 0.3) {
+                    hour = Math.floor(Math.random() * 3) + 15;
+                }
+
+                posts.push({
+                    id: `post-${i}`,
+                    user: `@user_${Math.floor(Math.random() * 9000)}`,
+                    name: 'مواطن',
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`,
+                    content: Math.random() > 0.5 ? 'يا ساتر وش ذا العنف 😱' : 'المقطع منتشر في كل مكان #مضاربة_النسيم',
+                    timestamp: hour * 60 + minute,
+                    isSource: false,
+                    likes: Math.floor(Math.random() * 50),
+                    retweets: Math.floor(Math.random() * 10),
+                    type: 'crowd'
+                });
+            }
+
+            return posts.sort((a, b) => a.timestamp - b.timestamp);
+        };
+
+        const App = () => {
+            const [posts, setPosts] = useState([]);
+            const [status, setStatus] = useState('idle');
+            const [searchWindow, setSearchWindow] = useState({ start: 0, end: 1440 });
+            const [logs, setLogs] = useState([]);
+            const [keywords, setKeywords] = useState([]);
+            const [targetPost, setTargetPost] = useState(null);
+            const [chartData, setChartData] = useState([]);
+
+            useEffect(() => {
+                const data = generateMockData();
+                setPosts(data);
+                
+                const volume = new Array(24).fill(0).map((_, i) => ({ hour: i, count: 0 }));
+                data.forEach(p => {
+                    const h = Math.floor(p.timestamp / 60);
+                    if(h < 24) volume[h].count++;
+                });
+                setChartData(volume);
+            }, []);
+
+            const addLog = (msg) => {
+                setLogs(prev => [...prev, { time: new Date().toLocaleTimeString('en-US', {hour12: false}), msg }]);
+            };
+
+            const formatTime = (minutes) => {
+                const h = Math.floor(minutes / 60);
+                const m = Math.floor(minutes % 60);
+                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            };
+
+            const startSimulation = async () => {
+                setStatus('analyzing');
+                setLogs([]);
+                setTargetPost(null);
+                setSearchWindow({ start: 0, end: 1440 });
+
+                addLog('بدء نظام الرصد...');
+                await new Promise(r => setTimeout(r, 800));
+                
+                addLog('رصد نشاط غير طبيعي في الوسم: #ترند_الرياض');
+                await new Promise(r => setTimeout(r, 1000));
+                addLog('جاري تحليل الردود لاستخراج "الاسم المتفق عليه"...');
+                
+                await new Promise(r => setTimeout(r, 1500));
+                setKeywords(['مضاربة', 'النسيم', 'مدرسة']);
+                addLog('تم تحديد النمط الدلالي: ["مضاربة", "النسيم", "مدرسة"]');
+                
+                setStatus('searching');
+                addLog('بدء خوارزمية البحث الزمني (Time-Bisection)...');
+                
+                let start = 0;
+                let end = 1440;
+                
+                const steps = 6;
+                for (let i = 0; i < steps; i++) {
+                    await new Promise(r => setTimeout(r, 1200));
+                    
+                    const mid = Math.floor((start + end) / 2);
+                    addLog(`فحص النطاق: ${formatTime(start)} - ${formatTime(end)} | المنتصف: ${formatTime(mid)}`);
+                    setSearchWindow({ start, end });
+
+                    const hasPostsBeforeMid = posts.some(p => 
+                        p.timestamp >= start && 
+                        p.timestamp < mid && 
+                        (p.content.includes('مضاربة') || p.isSource)
+                    );
+
+                    if (hasPostsBeforeMid) {
+                        addLog(`تم رصد تطابق دلالي قبل ${formatTime(mid)} -> تقليص النطاق للأعلى.`);
+                        end = mid;
+                    } else {
+                        addLog(`لا يوجد نشاط قبل ${formatTime(mid)} -> المصدر يقع بعد هذا الوقت.`);
+                        start = mid;
+                    }
+                }
+
+                await new Promise(r => setTimeout(r, 1000));
+                const culprit = posts.find(p => p.isSource);
+                setTargetPost(culprit);
+                setSearchWindow({ start: culprit.timestamp - 30, end: culprit.timestamp + 30 });
+                setStatus('found');
+                addLog(`تم تحديد المصدر الأولي! المستخدم: ${culprit.user}`);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    
+                    {/* Sidebar */}
+                    <aside className="w-full md:w-64 bg-slate-900 border-l border-slate-700 p-4 flex flex-col gap-6">
+                        <div className="flex items-center gap-3 text-emerald-400 mb-4">
+                            <Shield size={32} />
+                            <h1 className="text-2xl font-bold tracking-wider">كاشف</h1>
+                        </div>
+
+                        <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                            <h3 className="text-slate-400 text-sm mb-2 flex items-center gap-2">
+                                <Activity size={16} /> حالة النظام
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <span className={`w-3 h-3 rounded-full ${status === 'analyzing' || status === 'searching' ? 'bg-yellow-500 animate-pulse-fast' : status === 'found' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+                                <span className="font-mono text-sm">
+                                    {status === 'idle' && 'جاهز للرصد'}
+                                    {status === 'analyzing' && 'تحليل لغوي...'}
+                                    {status === 'searching' && 'بحث عكسي...'}
+                                    {status === 'found' && 'تم ضبط الهدف'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto">
+                            <h3 className="text-slate-400 text-sm mb-2 flex items-center gap-2">
+                                <Terminal size={16} /> سجل العمليات
+                            </h3>
+                            <div className="font-mono text-xs text-emerald-500/80 space-y-1">
+                                {logs.map((log, i) => (
+                                    <div key={i} className="border-b border-slate-800 pb-1">
+                                        <span className="text-slate-500">[{log.time}]</span> {log.msg}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={status === 'idle' || status === 'found' ? startSimulation : null}
+                            disabled={status === 'analyzing' || status === 'searching'}
+                            className={`w-full py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2
+                                ${status === 'analyzing' || status === 'searching' 
+                                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/50'}`}
+                        >
+                            {status === 'idle' || status === 'found' ? 'بدء المحاكاة' : 'جاري العمل...'}
+                        </button>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col gap-6">
+                        
+                        {/* Top Stats & Viz */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-1/3">
+                            
+                            {/* Chart Area */}
+                            <div className="lg:col-span-2 bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-xl relative">
+                                <h2 className="text-slate-300 font-bold mb-4 flex items-center gap-2">
+                                    <Clock size={18} /> النطاق الزمني للبحث (Time-Bisection Visualization)
+                                </h2>
+                                <div className="h-64 w-full">
+                                    {LineChart ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={chartData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                                <XAxis dataKey="hour" stroke="#94a3b8" />
+                                                <YAxis stroke="#94a3b8" />
+                                                <Tooltip 
+                                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f1f5f9' }}
+                                                />
+                                                {(status === 'searching' || status === 'found') && (
+                                                    <ReferenceArea 
+                                                        x1={Math.floor(searchWindow.start / 60)} 
+                                                        x2={Math.ceil(searchWindow.end / 60)} 
+                                                        strokeOpacity={0.3}
+                                                        fill="#10b981" 
+                                                        fillOpacity={0.1} 
+                                                    />
+                                                )}
+                                                <Line type="monotone" dataKey="count" stroke="#38bdf8" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-slate-500">
+                                            جاري تحميل الرسم البياني...
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="absolute top-4 left-4 bg-slate-900/80 p-2 rounded text-xs font-mono text-emerald-400 border border-emerald-900">
+                                    <div>T_start: {formatTime(searchWindow.start)}</div>
+                                    <div>T_end : {formatTime(searchWindow.end)}</div>
+                                    <div>Delta_T: {searchWindow.end - searchWindow.start}m</div>
+                                </div>
+                            </div>
+
+                            {/* Keywords & Detected Pattern */}
+                            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-xl flex flex-col">
+                                <h2 className="text-slate-300 font-bold mb-4 flex items-center gap-2">
+                                    <Hash size={18} /> البصمة الدلالية المستخرجة
+                                </h2>
+                                <div className="flex-1 flex flex-col justify-center items-center gap-3">
+                                    {keywords.length === 0 ? (
+                                        <div className="text-slate-600 text-center">
+                                            <Search size={48} className="mx-auto mb-2 opacity-20" />
+                                            <p>بانتظار التحليل...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full space-y-3">
+                                            {keywords.map((kw, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-slate-700/50 p-3 rounded border border-slate-600 animate-pulse">
+                                                    <span className="text-emerald-300 font-bold">#{kw}</span>
+                                                    <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-full">تكرار عالٍ</span>
+                                                </div>
+                                            ))}
+                                            <div className="mt-4 p-3 bg-blue-900/20 border border-blue-800 rounded text-xs text-blue-200">
+                                                تم استبدال البحث عن الفيديو بالبحث عن هذه الكلمات ضمن النطاق الزمني.
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bottom Feed & Results */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+                            
+                            {/* Live Feed Simulation */}
+                            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur flex justify-between items-center">
+                                    <h2 className="text-slate-300 font-bold flex items-center gap-2">
+                                        <Users size={18} /> ساحة الرصد (Live Feed)
+                                    </h2>
+                                    <span className="text-xs text-slate-500">{posts.length} منشور مرصود</span>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/50">
+                                    {posts.slice(0, 50).map((post) => (
+                                        <div key={post.id} className={`flex gap-3 p-3 rounded-lg border ${post.isSource && status === 'found' ? 'bg-red-900/20 border-red-500/50 ring-1 ring-red-500' : 'bg-slate-800 border-slate-700'}`}>
+                                            <img src={post.avatar} alt="avatar" className="w-10 h-10 rounded-full bg-slate-700" />
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="font-bold text-sm text-slate-200 block">{post.name}</span>
+                                                        <span className="text-xs text-slate-500" dir="ltr">{post.user}</span>
+                                                    </div>
+                                                    <span className="text-xs text-slate-500 font-mono">{formatTime(post.timestamp)}</span>
+                                                </div>
+                                                <p className="text-sm text-slate-300 mt-2">{post.content}</p>
+                                                {post.mediaType === 'video' && (
+                                                    <div className="mt-2 h-24 bg-black rounded flex items-center justify-center border border-slate-700 relative overflow-hidden group">
+                                                        <div className="absolute inset-0 bg-slate-800/50 flex items-center justify-center">
+                                                            <div className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center">▶</div>
+                                                        </div>
+                                                        <span className="absolute bottom-1 right-1 text-[10px] bg-black/70 px-1 rounded text-white">0:45</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-4 mt-2 text-xs text-slate-500">
+                                                    <span>↺ {post.retweets}</span>
+                                                    <span>♥ {post.likes}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Result: Target Profile */}
+                            <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl flex flex-col relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-20"></div>
+                                <div className="p-4 border-b border-slate-700">
+                                    <h2 className="text-slate-300 font-bold flex items-center gap-2">
+                                        <Target size={18} /> نتيجة التحليل (المصدر)
+                                    </h2>
+                                </div>
+                                
+                                <div className="flex-1 p-6 flex items-center justify-center">
+                                    {!targetPost ? (
+                                        <div className="text-center opacity-30">
+                                            <Shield size={64} className="mx-auto mb-4" />
+                                            <p>النظام في وضع الاستعداد...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full max-w-sm bg-slate-900 border border-red-500/30 rounded-xl p-6 relative overflow-hidden animate-in fade-in zoom-in duration-500">
+                                            <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl">مخالفة مؤكدة</div>
+                                            
+                                            <div className="flex flex-col items-center mb-6">
+                                                <div className="relative">
+                                                    <img src={targetPost.avatar} className="w-20 h-20 rounded-full border-4 border-slate-800" />
+                                                    <div className="absolute bottom-0 right-0 bg-red-500 w-5 h-5 rounded-full border-2 border-slate-800"></div>
+                                                </div>
+                                                <h3 className="mt-3 text-xl font-bold text-white">{targetPost.name}</h3>
+                                                <p className="text-slate-400" dir="ltr">{targetPost.user}</p>
+                                            </div>
+
+                                            <div className="space-y-3 text-sm border-t border-slate-800 pt-4">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">وقت النشر:</span>
+                                                    <span className="text-emerald-400 font-mono font-bold">{formatTime(targetPost.timestamp)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">النوع:</span>
+                                                    <span className="text-slate-300">مقطع فيديو (الأصل)</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">سبب الرصد:</span>
+                                                    <span className="text-red-400">تطابق pHash + كلمات دلالية</span>
+                                                </div>
+                                            </div>
+
+                                            <button className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white py-2 rounded font-bold text-sm transition-colors shadow-lg shadow-red-900/20">
+                                                تصدير تقرير للجهات المعنية
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
