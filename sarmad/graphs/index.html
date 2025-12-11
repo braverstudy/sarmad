@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تتبع صدى الانتشار - Viral Spread Visualization</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050a14;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 195, 255, 0.7);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 1px;
+            color: #4facfe;
+        }
+
+        .header p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            color: #aaa;
+            transition: color 0.3s ease;
+        }
+
+        .timeline-bar {
+            position: relative;
+            width: 100%;
+            height: 60px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            box-sizing: border-box;
+        }
+
+        .time-label {
+            font-size: 14px;
+            color: #4facfe;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        .controls {
+            pointer-events: auto;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 25px;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-reset {
+            background: linear-gradient(45deg, #00f260, #0575e6);
+            box-shadow: 0 4px 15px rgba(0, 242, 96, 0.4);
+        }
+
+        .btn-trace {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+        }
+
+        button:hover {
+            transform: translateX(-50%) scale(1.05);
+            filter: brightness(1.2);
+        }
+
+        button:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(16, 25, 40, 0.95);
+            border: 1px solid #4facfe;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+            pointer-events: none;
+            max-width: 250px;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.2);
+            font-size: 12px;
+            color: #eee;
+            z-index: 10;
+        }
+
+        .tweet-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        .tweet-avatar {
+            width: 20px;
+            height: 20px;
+            background: #4facfe;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        /* نافذة المعلومات الخاصة بالبحث */
+        #search-info {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #ff416c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+            z-index: 5;
+        }
+
+        #search-info h3 {
+            margin: 0 0 5px 0;
+            color: #ff416c;
+            font-size: 16px;
+        }
+
+        #search-info span {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container">
+        <canvas id="networkCanvas"></canvas>
+    </div>
+
+    <div id="ui-layer">
+        <div class="header">
+            <h1>تحليل انتشار المحتوى - Network Graph</h1>
+            <p id="status-text">من المصدر (اليسار) إلى التفاعل الفيروسي (اليمين)</p>
+        </div>
+
+        <!-- نافذة منبثقة لمعلومات البحث -->
+        <div id="search-info">
+            <h3>Binary Search Window</h3>
+            نطاق البحث الحالي: <span id="search-count">0</span> تغريدة
+        </div>
+
+        <div class="controls">
+            <button class="btn-trace" onclick="startBinarySearch()">بحث عن المصدر (Binary Search) 🔍</button>
+            <button class="btn-reset" onclick="resetSimulation()">إعادة المحاكاة ⟳</button>
+        </div>
+
+        <div class="timeline-bar">
+            <div class="time-label">البداية (المنشور الأصلي)</div>
+            <div
+                style="flex-grow: 1; height: 1px; background: linear-gradient(to left, #4facfe, transparent); margin: 0 20px;">
+            </div>
+            <div class="time-label">الآن (انتشار واسع)</div>
+        </div>
+    </div>
+
+    <div id="tooltip">
+        <div class="tweet-header">
+            <div class="tweet-avatar"></div>
+            <span id="tooltip-user">User123</span>
+        </div>
+        <div id="tooltip-text">محتوى التغريدة...</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const statusText = document.getElementById('status-text');
+        const searchInfoBox = document.getElementById('search-info');
+        const searchCountText = document.getElementById('search-count');
+
+        let width, height;
+        let nodes = [];
+        let edges = [];
+        let animationFrameId;
+        let hoveredNode = null;
+
+        // حالة البحث الثنائي (Binary Search State)
+        let searchState = {
+            active: false,
+            minX: 0,
+            maxX: 0,        // النافذة الحالية
+            currentSplitX: 0, // مكان خط القسمة الحالي
+            step: 0,        // 0: Idle, 1: Scan, 2: Reject(Wrong Path), 3: Shrink
+            timer: 0,
+            probes: []      // الخطوط الحمراء "المسارات الخاطئة"
+        };
+
+        const CONFIG = {
+            maxNodes: 800,       // قللنا العدد قليلاً بسبب زيادة المسافات
+            growSpeed: 2,
+            branchChance: 0.12,
+            connectionRange: 100,
+            colors: {
+                root: '#FFD700',
+                highLevel: '#00C3FF',
+                leaf: '#6e48aa',
+                edge: 'rgba(79, 200, 255, 0.4)',
+                highlightPath: '#FF4500',
+                searchWindow: 'rgba(0, 195, 255, 0.1)',
+                searchLine: '#ff416c',
+                rejected: 'rgba(255, 65, 108, 0.5)'
+            }
+        };
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Node {
+            constructor(x, y, level, parent = null) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.level = level;
+                this.parent = parent;
+
+                // تحديد الحجم
+                if (level === 0) {
+                    this.radius = 25;
+                    this.color = CONFIG.colors.root;
+                    this.glow = 30;
+                } else {
+                    this.radius = Math.max(2, 12 * Math.pow(0.85, level));
+                    this.color = level < 5 ? CONFIG.colors.highLevel : 'rgba(150, 200, 255, 0.6)';
+                    this.glow = level < 3 ? 10 : 0;
+                }
+
+                this.opacity = 0;
+                this.targetOpacity = 1;
+                this.vx = (Math.random() - 0.5) * 0.2;
+                this.vy = (Math.random() - 0.5) * 0.2;
+
+                this.isRejected = false; // للعقد التي تم استبعادها أثناء البحث
+
+                this.data = {
+                    user: level === 0 ? "المصدر الأصلي" : `مستخدم_${Math.floor(Math.random() * 9000)}`,
+                    content: level === 0 ? "بداية القصة والحدث..." : "تفاعل، ريتويت، أو رد..."
+                };
+            }
+
+            update() {
+                if (this.opacity < this.targetOpacity) {
+                    this.opacity += 0.05;
+                }
+                // حركة بسيطة
+                this.x += this.vx;
+                this.y += this.vy;
+                const drift = 5;
+                if (this.x > this.originX + drift || this.x < this.originX - drift) this.vx *= -1;
+                if (this.y > this.originY + drift || this.y < this.originY - drift) this.vy *= -1;
+            }
+
+            draw(ctx) {
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+
+                // إذا تم استبعاد العقدة، نرسمها بلون باهت أو أحمر
+                if (this.isRejected) {
+                    ctx.fillStyle = '#333'; // لون مطفأ
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                } else {
+                    if (this.glow > 0) {
+                        ctx.shadowBlur = this.glow;
+                        ctx.shadowColor = this.color;
+                    } else {
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function init() {
+            nodes = [];
+            edges = [];
+            searchState.active = false;
+            searchInfoBox.style.display = 'none';
+            statusText.innerText = "من المصدر (اليسار) إلى التفاعل الفيروسي (اليمين)";
+            statusText.style.color = "#aaa";
+
+            // البداية في المنتصف الأيسر
+            const rootNode = new Node(80, height / 2, 0);
+            nodes.push(rootNode);
+        }
+
+        // --- وظيفة البحث الثنائي (Binary Search Algorithm) ---
+        function startBinarySearch() {
+            if (nodes.length < 20) {
+                alert("الرجاء انتظار انتشار الشبكة قليلاً!");
+                return;
+            }
+
+            searchState.active = true;
+            searchState.minX = 0;
+            searchState.maxX = width; // نبدأ بالنطاق الكامل
+            searchState.step = 1; // Scan Phase
+            searchState.timer = 0;
+            searchState.probes = [];
+
+            // إعادة تلوين العقد
+            nodes.forEach(n => n.isRejected = false);
+
+            searchInfoBox.style.display = 'block';
+            statusText.innerText = "جاري تنفيذ خوارزمية Binary Search الزمنية للوصول للمصدر...";
+            statusText.style.color = CONFIG.colors.searchLine;
+        }
+
+        function growNetwork() {
+            // توقف النمو أثناء البحث
+            if (searchState.active) return;
+            if (nodes.length >= CONFIG.maxNodes) return;
+
+            const activeNodes = nodes.filter(n => n.x < width - 100 && Math.random() < 0.4);
+
+            for (let parent of activeNodes) {
+                if (Math.random() < CONFIG.branchChance) {
+                    const angleSpread = Math.PI / 1.2;
+                    const angle = (Math.random() - 0.5) * angleSpread;
+
+                    // زيادة المسافة هنا (More Spacing)
+                    const distance = 50 + Math.random() * 100; // كانت 20+60
+
+                    const newX = parent.x + Math.abs(Math.cos(angle) * distance) + (Math.random() * 20);
+                    const newY = parent.y + Math.sin(angle) * distance;
+
+                    if (newY > 40 && newY < height - 40 && newX < width - 40) {
+                        const newLevel = parent.level + 1;
+                        const newNode = new Node(newX, newY, newLevel, parent);
+                        nodes.push(newNode);
+                        edges.push({ from: parent, to: newNode, opacity: 0 });
+                        if (nodes.length >= CONFIG.maxNodes) break;
+                    }
+                }
+            }
+        }
+
+        function updateSearchAnimation() {
+            if (!searchState.active) return;
+
+            searchState.timer++;
+
+            // حساب عدد العقد في النطاق النشط (يسار الخط)
+            const activeNodesCount = nodes.filter(n => n.x >= searchState.minX && n.x <= searchState.maxX && !n.isRejected).length;
+            searchCountText.innerText = activeNodesCount;
+
+            // Phase 1: تحديد نقطة المنتصف (Scan)
+            if (searchState.step === 1) {
+                // الهدف هو منتصف المسافة الحالية
+                const mid = (searchState.minX + searchState.maxX) / 2;
+                searchState.currentSplitX = mid; // تحريك الخط للمنتصف
+
+                // عندما يستقر الخط
+                if (searchState.timer > 30) {
+                    searchState.step = 2; // انتقل لمرحلة "المسارات الخاطئة"
+                    searchState.timer = 0;
+
+                    // إنشاء "مجسات" (Probes) للمنطقة اليمنى (التي سيتم استبعادها)
+                    // هذه تمثل المسارات التي تفحصها الخوارزمية وتجد أنها "حديثة جداً"
+                    searchState.probes = [];
+                    const nodesInRejectZone = nodes.filter(n => n.x > mid && n.x <= searchState.maxX && !n.isRejected);
+
+                    // نختار بعض العقد عشوائياً لنظهر "محاولة الوصول لها"
+                    const samples = nodesInRejectZone.sort(() => 0.5 - Math.random()).slice(0, 5);
+
+                    samples.forEach(target => {
+                        searchState.probes.push({
+                            x1: mid, y1: height / 2, // من خط البحث
+                            x2: target.x, y2: target.y, // إلى العقدة
+                            life: 1.0,
+                            targetNode: target
+                        });
+                    });
+                }
+            }
+
+            // Phase 2: إظهار المسارات الخاطئة (Wrong Paths / Dead Ends)
+            else if (searchState.step === 2) {
+                // تقليل عمر الخطوط
+                let stillAlive = false;
+                searchState.probes.forEach(p => {
+                    p.life -= 0.05;
+                    if (p.life > 0) stillAlive = true;
+                });
+
+                if (searchState.timer > 20) { // بعد وميض الخطوط
+                    // استبعاد العقد في النصف الأيمن
+                    nodes.forEach(n => {
+                        if (n.x > searchState.currentSplitX && n.x <= searchState.maxX) {
+                            n.isRejected = true;
+                        }
+                    });
+
+                    searchState.step = 3;
+                    searchState.timer = 0;
+                }
+            }
+
+            // Phase 3: تقليص النافذة (Shrink Window)
+            else if (searchState.step === 3) {
+                // تحريك الحد الأقصى إلى نقطة الانقسام
+                searchState.maxX = searchState.currentSplitX;
+
+                if (activeNodesCount <= 1 || searchState.maxX < 150) {
+                    // وصلنا للنهاية!
+                    searchState.active = false;
+                    searchInfoBox.style.display = 'none';
+                    statusText.innerText = "تم الوصول للمصدر الأصلي (أقدم تغريدة)!";
+                    statusText.style.color = "#00f260";
+
+                    // تسليط الضوء على المصدر
+                    nodes[0].glow = 100;
+                    nodes[0].radius = 50;
+                } else {
+                    // تكرار الحلقة
+                    searchState.step = 1;
+                    searchState.timer = 0;
+                }
+            }
+        }
+
+        function drawSearchOverlay(ctx) {
+            if (!searchState.active) return;
+
+            const splitX = searchState.currentSplitX;
+
+            // 1. تظليل المنطقة المستبعدة (يمين الخط)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(splitX, 0, width - splitX, height);
+
+            // 2. تظليل منطقة البحث النشطة (يسار الخط)
+            ctx.fillStyle = CONFIG.colors.searchWindow;
+            ctx.fillRect(0, 0, splitX, height);
+
+            // 3. رسم خط المسح (Scan Line)
+            ctx.beginPath();
+            ctx.moveTo(splitX, 0);
+            ctx.lineTo(splitX, height);
+            ctx.strokeStyle = CONFIG.colors.searchLine;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 4. رسم مجسات المسارات الخاطئة (Probes)
+            if (searchState.step === 2) {
+                searchState.probes.forEach(p => {
+                    if (p.life <= 0) return;
+
+                    ctx.beginPath();
+                    ctx.moveTo(p.x1, p.y1);
+                    ctx.lineTo(p.x2, p.y2);
+                    ctx.strokeStyle = `rgba(255, 65, 108, ${p.life})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // علامة X صغيرة على العقدة المستهدفة
+                    if (p.life > 0.5) {
+                        ctx.beginPath();
+                        ctx.arc(p.targetNode.x, p.targetNode.y, p.targetNode.radius + 5, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255, 65, 108, ${p.life})`;
+                        ctx.stroke();
+                    }
+                });
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'screen';
+
+            // تحديث منطق البحث
+            updateSearchAnimation();
+
+            // 1. رسم الخطوط
+            ctx.lineWidth = 0.8;
+            edges.forEach(edge => {
+                if (edge.opacity < 1) edge.opacity += 0.02;
+
+                // نخفف الخطوط إذا كانت العقد مستبعدة
+                if (edge.to.isRejected) {
+                    ctx.strokeStyle = 'rgba(50, 50, 50, 0.2)';
+                } else {
+                    ctx.strokeStyle = `rgba(79, 172, 254, ${edge.opacity * 0.3})`;
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(edge.from.x, edge.from.y);
+                ctx.lineTo(edge.to.x, edge.to.y);
+                ctx.stroke();
+            });
+
+            // 2. رسم العقد
+            growNetwork();
+
+            nodes.forEach(node => {
+                node.update();
+                node.draw(ctx);
+            });
+
+            // 3. رسم طبقة البحث (Search Overlay) فوق كل شيء
+            ctx.globalCompositeOperation = 'source-over';
+            drawSearchOverlay(ctx);
+
+            // رسم المسار عند التمرير (فقط إذا لم يكن البحث نشطاً)
+            if (hoveredNode && !searchState.active) {
+                ctx.globalCompositeOperation = 'screen';
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = CONFIG.colors.highlightPath;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = CONFIG.colors.highlightPath;
+                let current = hoveredNode;
+                ctx.beginPath();
+                while (current.parent) {
+                    ctx.moveTo(current.x, current.y);
+                    ctx.lineTo(current.parent.x, current.parent.y);
+                    current = current.parent;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let found = false;
+            hoveredNode = null;
+
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const node = nodes[i];
+                // لا نتفاعل مع العقد المستبعدة أثناء البحث
+                if (searchState.active && node.isRejected) continue;
+
+                const dx = mouseX - node.x;
+                const dy = mouseY - node.y;
+                const hitRadius = Math.max(node.radius, 10); // زيادة منطقة النقر قليلاً مع التباعد
+
+                if (dx * dx + dy * dy < hitRadius * hitRadius) {
+                    canvas.style.cursor = 'pointer';
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY + 15) + 'px';
+
+                    document.getElementById('tooltip-user').innerText = node.data.user;
+                    document.getElementById('tooltip-text').innerText = node.data.content;
+                    hoveredNode = node;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                canvas.style.cursor = 'default';
+                tooltip.style.display = 'none';
+                hoveredNode = null;
+            }
+        });
+
+        function resetSimulation() {
+            cancelAnimationFrame(animationFrameId);
+            init();
+            animate();
+        }
+
+        init();
+        animate();
+
+    </script>
+</body>
+
+</html>

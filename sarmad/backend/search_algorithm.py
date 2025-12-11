@@ -147,8 +147,11 @@ async def find_patient_zero(
         search_path.append(progress)
         
         # Notify callback
+        # Notify callback
         if on_progress:
-            on_progress(progress)
+            res = on_progress(progress)
+            if asyncio.iscoroutine(res):
+                await res
         
         # Delay for visualization
         if delay_ms > 0:

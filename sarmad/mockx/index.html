@@ -695,20 +695,20 @@
                                     <HomeIcon size={26} />
                                     <span>الرئيسية</span>
                                 </div>
-                                <div
-                                    className={`nav-tab ${activeTab === 'search' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('search')}
+                                <a
+                                    href="pages/search.html"
+                                    className="nav-tab"
                                 >
                                     <SearchIcon size={26} />
-                                    <span>البحث</span>
-                                </div>
-                                <div
-                                    className={`nav-tab ${activeTab === 'trends' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('trends')}
+                                    <span>البحث المتقدم</span>
+                                </a>
+                                <a
+                                    href="pages/trends.html"
+                                    className="nav-tab"
                                 >
                                     <TrendIcon size={26} />
-                                    <span>المحتوى الشائع</span>
-                                </div>
+                                    <span>الأكثر تداولاً</span>
+                                </a>
                             </nav>
 
                             <button className="btn-primary w-full mt-4 py-3 text-lg">
@@ -720,18 +720,17 @@
                                 <p className="text-xs text-[#71767b] mt-1">هذه منصة تجريبية لاختبار نظام سرمد</p>
                             </div>
 
-                            {/* Sarmad Link */}
-                            <div className="p-4 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 rounded-xl border border-emerald-700/30">
-                                <p className="font-bold text-emerald-400 text-sm">نظام سرمد</p>
-                                <p className="text-xs text-[#71767b] mt-1">كاشف المصادر</p>
-                                <a
-                                    href="http://localhost:8000/static/index.html"
-                                    target="_blank"
-                                    className="btn-primary block text-center text-sm mt-3 py-2"
-                                >
-                                    فتح لوحة التحليل
-                                </a>
-                            </div>
+                            {/* Sarmad Dashboard Link */}
+                            <a href="../sarmad-dashboard/index.html" className="p-4 bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 rounded-xl border border-emerald-700/30 block">
+                                <p className="font-bold text-emerald-400 text-sm">🛡️ لوحة تحكم سرمد</p>
+                                <p className="text-xs text-[#71767b] mt-1">إدارة البلاغات والتحليل</p>
+                            </a>
+
+                            {/* Report Link */}
+                            <a href="../reports-portal/index.html" className="p-4 bg-gradient-to-br from-red-900/40 to-red-800/20 rounded-xl border border-red-700/30 block">
+                                <p className="font-bold text-red-400 text-sm">🚨 الإبلاغ عن مخالفة</p>
+                                <p className="text-xs text-[#71767b] mt-1">بوابة البلاغات العامة</p>
+                            </a>
                         </div>
 
                         {/* Main Feed */}

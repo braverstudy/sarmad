@@ -14,7 +14,21 @@ from datetime import datetime
 import asyncio
 import json
 import os
+import sys
+
+# Add current directory to path so we can import local modules
+# regardless of where the script is run from
+sys.path.append(os.path.dirname(__file__))
 import httpx
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("SarmadBackend")
 
 from nlp_engine import extract_semantic_fingerprint, find_tweets_with_keywords
 from search_algorithm import find_patient_zero, SearchProgress, format_search_log
@@ -69,16 +83,18 @@ async def fetch_from_mockx():
                 data = response.json()
                 dataset = data.get("data", [])
                 mockx_connected = True
-                print(f"✅ Connected to MockX: {len(dataset)} tweets fetched")
+                logger.info(f"✅ Connected to MockX: {len(dataset)} tweets fetched")
                 return True
+            else:
+                logger.warning(f"⚠️ MockX returned status {response.status_code}")
     except Exception as e:
-        print(f"⚠️ MockX not available: {e}")
+        logger.warning(f"⚠️ MockX not available: {e}. Starting in offline mode.")
         mockx_connected = False
     
     # Fallback: generate locally if MockX not available
     from data_generator import generate_synthetic_dataset
     dataset = generate_synthetic_dataset()
-    print(f"📊 Fallback: Generated {len(dataset)} local tweets")
+    logger.info(f"📊 Fallback: Generated {len(dataset)} local tweets")
     return False
 
 
@@ -88,13 +104,7 @@ async def startup_event():
     await fetch_from_mockx()
 
 
-@app.get("/")
-async def root():
-    """Serve frontend."""
-    frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
-    if os.path.exists(frontend_path):
-        return FileResponse(frontend_path)
-    return {"message": "Sarmad API is running. Frontend not found."}
+
 
 
 @app.get("/api/status")
@@ -177,6 +187,97 @@ async def search_tweets(
     }
 
 
+# ==================== Reports Management API ====================
+
+from reports_manager import ReportsManager, ReportStatus, CancelReason
+
+reports_manager = ReportsManager()
+
+
+class CreateReportRequest(BaseModel):
+    """Request model for creating a new report."""
+    tweet_url: str
+    description: str
+    reporter_name: str
+    reporter_phone: str
+    reporter_id: Optional[str] = None
+
+
+class UpdateStatusRequest(BaseModel):
+    """Request model for updating report status."""
+    status: str
+    cancel_reason: Optional[str] = None
+    source_tweet_id: Optional[str] = None
+
+
+@app.post("/api/reports")
+async def create_report(request: CreateReportRequest):
+    """Create a new violation report."""
+    try:
+        report = reports_manager.create_report(
+            tweet_url=request.tweet_url,
+            description=request.description,
+            reporter_name=request.reporter_name,
+            reporter_phone=request.reporter_phone,
+            reporter_id=request.reporter_id
+        )
+        logger.info(f"📥 New report created: {report.id}")
+        return {"id": report.id, "status": "created"}
+    except Exception as e:
+        logger.error(f"Error creating report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/reports")
+async def get_reports(status: str = None):
+    """Get all reports, optionally filtered by status."""
+    reports = reports_manager.get_all_reports(status)
+    stats = reports_manager.get_statistics()
+    return {
+        "reports": [r.to_dict() for r in reports],
+        "stats": stats
+    }
+
+
+@app.get("/api/reports/{report_id}")
+async def get_report(report_id: str):
+    """Get a single report by ID."""
+    report = reports_manager.get_report(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report.to_dict()
+
+
+@app.post("/api/reports/{report_id}/activate")
+async def activate_report(report_id: str):
+    """Activate a report for analysis."""
+    report = reports_manager.activate_report(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    logger.info(f"🔍 Report activated: {report_id}")
+    return {"status": "activated"}
+
+
+@app.post("/api/reports/{report_id}/resolve")
+async def resolve_report(report_id: str, source_tweet_id: str):
+    """Mark a report as resolved with source found."""
+    report = reports_manager.resolve_report(report_id, source_tweet_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    logger.info(f"✅ Report resolved: {report_id}")
+    return {"status": "resolved"}
+
+
+@app.post("/api/reports/{report_id}/cancel")
+async def cancel_report(report_id: str, reason: str):
+    """Cancel a report with reason."""
+    report = reports_manager.cancel_report(report_id, reason)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    logger.info(f"❌ Report cancelled: {report_id} - {reason}")
+    return {"status": "cancelled"}
+
+
 # ==================== WebSocket for Real-time Updates ====================
 
 class ConnectionManager:
@@ -231,24 +332,29 @@ async def websocket_analysis(websocket: WebSocket):
                 # Send tweet batch
                 limit = data.get("limit", 50)
                 offset = data.get("offset", 0)
+                logger.info(f"WebSocket: Sending {min(limit, len(dataset))} tweets (offset={offset})")
                 await websocket.send_json({
                     "type": "tweets",
                     "data": dataset[offset:offset + limit],
                     "total": len(dataset)
                 })
-            
             elif data.get("action") == "get_volume":
                 # Send volume data
                 volume = {}
                 for t in dataset:
                     dt = datetime.fromisoformat(t["created_at"].replace("Z", ""))
                     volume[dt.hour] = volume.get(dt.hour, 0) + 1
+                logger.info("WebSocket: Sending volume data")
                 await websocket.send_json({
                     "type": "volume",
                     "data": [{"hour": h, "count": volume.get(h, 0)} for h in range(24)]
                 })
     
     except WebSocketDisconnect:
+        logger.info("WebSocket disconnected")
+        manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}", exc_info=True)
         manager.disconnect(websocket)
 
 
@@ -265,6 +371,14 @@ async def run_analysis_pipeline(websocket: WebSocket, reported_tweet_id: str = N
     from search_algorithm import find_source_from_report
     
     async def send_log(msg: str, level: str = "info"):
+        # Log to console as well
+        if level == "error":
+            logger.error(f"Analysis: {msg}")
+        elif level == "success":
+            logger.info(f"Analysis: ✅ {msg}")
+        else:
+            logger.info(f"Analysis: {msg}")
+            
         await websocket.send_json({
             "type": "log",
             "message": msg,
@@ -387,6 +501,7 @@ async def run_analysis_pipeline(websocket: WebSocket, reported_tweet_id: str = N
     
     except Exception as e:
         await send_log(f"❌ خطأ: {str(e)}", "error")
+        logger.exception("Error in analysis pipeline")
         await websocket.send_json({
             "type": "error",
             "message": str(e)
@@ -395,12 +510,31 @@ async def run_analysis_pipeline(websocket: WebSocket, reported_tweet_id: str = N
 
 # ==================== Static Files ====================
 
-# Serve frontend static files
-frontend_dir = os.path.join(os.path.dirname(__file__), "..", "frontend")
+# Serve different frontend directories
+base_dir = os.path.dirname(os.path.dirname(__file__))
+
+# Sarmad Dashboard
+dashboard_dir = os.path.join(base_dir, "sarmad-dashboard")
+if os.path.exists(dashboard_dir):
+    app.mount("/dashboard", StaticFiles(directory=dashboard_dir, html=True), name="dashboard")
+
+# Reports Portal
+reports_dir = os.path.join(base_dir, "reports-portal")
+if os.path.exists(reports_dir):
+    app.mount("/reports", StaticFiles(directory=reports_dir, html=True), name="reports")
+
+# Graphs Visualization
+graphs_dir = os.path.join(base_dir, "graphs")
+if os.path.exists(graphs_dir):
+    app.mount("/graphs", StaticFiles(directory=graphs_dir, html=True), name="graphs")
+
+# Frontend (main Sarmad analysis page) - must be last as it's the root
+frontend_dir = os.path.join(base_dir, "frontend")
 if os.path.exists(frontend_dir):
-    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+

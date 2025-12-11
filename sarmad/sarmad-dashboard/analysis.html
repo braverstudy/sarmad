@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحليل البلاغ | سرمد</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #0a0f1a;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(15, 22, 40, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #9ca3af;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .report-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .header-left {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* Main Layout */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        /* Left Column - Analysis */
+        .analysis-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Timeline Chart */
+        .chart-container {
+            height: 200px;
+            direction: ltr;
+        }
+
+        /* Keywords */
+        .keywords-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .keyword-tag {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Console */
+        .console {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .console-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .console-time {
+            color: #6b7280;
+            margin-left: 10px;
+        }
+
+        .console-msg {
+            color: #9ca3af;
+        }
+
+        .console-msg.success {
+            color: #10b981;
+        }
+
+        .console-msg.error {
+            color: #ef4444;
+        }
+
+        /* Right Column - Source Result */
+        .result-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .source-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .source-header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .source-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 15px;
+            border: 3px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .source-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .source-username {
+            color: #6b7280;
+            font-size: 14px;
+            direction: ltr;
+        }
+
+        .violation-badge {
+            display: inline-block;
+            background: #ef4444;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .source-stats {
+            padding: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+        }
+
+        .stat-value {
+            font-weight: 600;
+        }
+
+        .stat-value.time {
+            color: #10b981;
+        }
+
+        .stat-value.count {
+            color: #a855f7;
+        }
+
+        .source-tweet {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin: 0 20px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Tweets List */
+        .tweets-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .tweet-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 12px;
+        }
+
+        .tweet-avatar-small {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .tweet-content {
+            flex: 1;
+        }
+
+        .tweet-user {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .tweet-text {
+            font-size: 13px;
+            color: #9ca3af;
+            line-height: 1.5;
+        }
+
+        .tweet-time {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        /* Status indicator */
+        .status-bar {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 10px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.9);
+            }
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #10b981;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-right">
+            <button class="back-btn" onclick="window.location.href='index.html'">
+                → العودة
+            </button>
+            <span class="report-badge" id="reportId">#--------</span>
+        </div>
+        <div class="header-left">
+            <button class="btn btn-secondary" onclick="startAnalysis()">
+                ▶️ بدء التحليل
+            </button>
+            <button class="btn btn-primary" onclick="exportReport()">
+                📄 تصدير التقرير
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Left Column -->
+        <div class="analysis-col">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-dot"></div>
+                <span class="status-text" id="statusText">جاهز للتحليل</span>
+            </div>
+
+            <!-- Timeline Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <span>📈</span>
+                        التسلسل الزمني للتغريدات
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" id="chartContainer">
+                        <div class="empty-state">
+                            <div class="icon">📊</div>
+                            <p>سيظهر المخطط بعد بدء التحليل</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keywords -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <span>🔤</span>
+                        البصمة الدلالية
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="keywords-grid" id="keywordsContainer">
+                        <div class="empty-state" style="width:100%">
+                            <p>سيتم استخراج الكلمات المفتاحية...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <span>💻</span>
+                        سجل العمليات
+                    </h3>
+                </div>
+                <div class="card-body" style="padding:10px;">
+                    <div class="console" id="console">
+                        <div class="console-line">
+                            <span class="console-time">[--:--:--]</span>
+                            <span class="console-msg">في انتظار بدء التحليل...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Tweets -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <span>🐦</span>
+                        ساحة المنشورات المرتبطة
+                    </h3>
+                    <span style="color:#6b7280;font-size:12px;" id="tweetsCount">0 تغريدة</span>
+                </div>
+                <div class="tweets-list" id="tweetsList">
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>لا توجد تغريدات مرتبطة</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Source Result -->
+        <div class="result-col">
+            <div class="card source-card" id="sourceCard">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <span>🎯</span>
+                        نتيجة التحليل
+                    </h3>
+                </div>
+                <div id="sourceContent">
+                    <div class="empty-state" style="padding:60px 20px;">
+                        <div class="icon">🔍</div>
+                        <p>في انتظار تحديد المصدر</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const WS_URL = `ws://${window.location.hostname}:8000/ws/analysis`;
+
+        let reportId = null;
+        let ws = null;
+
+        // Get report ID from URL
+        const params = new URLSearchParams(window.location.search);
+        reportId = params.get('id');
+
+        if (reportId) {
+            document.getElementById('reportId').textContent = `#${reportId}`;
+            loadReportDetails();
+        }
+
+        async function loadReportDetails() {
+            try {
+                const response = await fetch(`${API_BASE}/api/reports/${reportId}`);
+                if (response.ok) {
+                    const report = await response.json();
+                    // Update UI with report details
+                    addLog(`تم تحميل البلاغ: ${report.description}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                addLog('تعذر الاتصال بالخادم - وضع العرض التجريبي', 'error');
+            }
+        }
+
+        function startAnalysis() {
+            // Connect to WebSocket
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                addLog('تم الاتصال بخادم التحليل', 'success');
+                updateStatus('جاري التحليل...');
+
+                // Start analysis
+                ws.send(JSON.stringify({
+                    action: 'start_analysis',
+                    tweet_id: reportId
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWSMessage(data);
+            };
+
+            ws.onerror = (error) => {
+                addLog('خطأ في الاتصال', 'error');
+            };
+
+            ws.onclose = () => {
+                addLog('تم إغلاق الاتصال');
+            };
+        }
+
+        function handleWSMessage(data) {
+            switch (data.type) {
+                case 'status':
+                    updateStatus(getStatusLabel(data.status));
+                    break;
+
+                case 'log':
+                    addLog(data.message, data.level);
+                    break;
+
+                case 'volume':
+                    renderChart(data.data);
+                    break;
+
+                case 'nlp_result':
+                    renderKeywords(data.keywords, data.bigrams);
+                    break;
+
+                case 'tweets':
+                    renderTweets(data.data);
+                    break;
+
+                case 'source_found':
+                    renderSource(data.tweet, data.iterations);
+                    break;
+
+                case 'search_progress':
+                    updateStatus(`بحث... النطاق: ${data.window_minutes} دقيقة`);
+                    break;
+            }
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'analyzing': 'جاري التحليل اللغوي...',
+                'searching': 'جاري البحث عن المصدر...',
+                'found': 'تم تحديد المصدر!'
+            };
+            return labels[status] || status;
+        }
+
+        function updateStatus(text) {
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function addLog(message, level = 'info') {
+            const console = document.getElementById('console');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `
+                <span class="console-time">[${time}]</span>
+                <span class="console-msg ${level}">${message}</span>
+            `;
+
+            console.appendChild(line);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function renderKeywords(keywords, bigrams) {
+            const container = document.getElementById('keywordsContainer');
+
+            if (!keywords || keywords.length === 0) {
+                container.innerHTML = '<p style="color:#6b7280">لم يتم استخراج كلمات مفتاحية</p>';
+                return;
+            }
+
+            container.innerHTML = keywords.map(kw => `
+                <div class="keyword-tag">
+                    <span>#</span>
+                    ${kw}
+                </div>
+            `).join('');
+
+            if (bigrams && bigrams.length > 0) {
+                container.innerHTML += bigrams.slice(0, 3).map(bg => `
+                    <div class="keyword-tag" style="background:rgba(59,130,246,0.2);color:#3b82f6;">
+                        ${bg}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderTweets(tweets) {
+            const container = document.getElementById('tweetsList');
+            const countEl = document.getElementById('tweetsCount');
+
+            countEl.textContent = `${tweets.length} تغريدة`;
+
+            if (!tweets || tweets.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>لا توجد تغريدات</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tweets.slice(0, 20).map(tweet => `
+                <div class="tweet-item">
+                    <div class="tweet-avatar-small">👤</div>
+                    <div class="tweet-content">
+                        <div class="tweet-user">${tweet.author?.name || 'مستخدم'}</div>
+                        <div class="tweet-text">${tweet.text || ''}</div>
+                        <div class="tweet-time">${formatTime(tweet.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSource(tweet, iterations) {
+            const container = document.getElementById('sourceContent');
+
+            if (!tweet) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding:60px 20px;">
+                        <div class="icon">❌</div>
+                        <p>لم يتم العثور على المصدر</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="source-header">
+                    <div class="source-avatar">👤</div>
+                    <div class="source-name">${tweet.author?.name || 'مستخدم'}</div>
+                    <div class="source-username">${tweet.author?.username || '@user'}</div>
+                    <div class="violation-badge">🚨 مخالفة مؤكدة</div>
+                </div>
+                <div class="source-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">وقت النشر:</span>
+                        <span class="stat-value time">${formatTime(tweet.created_at)}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">عدد التكرارات:</span>
+                        <span class="stat-value count">${iterations} تكرار</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">نقاط الموثوقية:</span>
+                        <span class="stat-value">${Math.round((tweet.author?.reliability_score || 0.5) * 100)}%</span>
+                    </div>
+                </div>
+                <div class="source-tweet">${tweet.text || ''}</div>
+            `;
+
+            updateStatus('تم تحديد المصدر!');
+            addLog('🎯 تم تحديد المصدر الأصلي!', 'success');
+        }
+
+        function renderChart(data) {
+            const container = document.getElementById('chartContainer');
+
+            // Simple bar chart using CSS
+            const maxCount = Math.max(...data.map(d => d.count));
+
+            container.innerHTML = `
+                <div style="display:flex;align-items:flex-end;height:180px;gap:4px;padding:10px 0;">
+                    ${data.map(d => `
+                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+                            <div style="
+                                width:100%;
+                                height:${(d.count / maxCount) * 150}px;
+                                background:linear-gradient(180deg, #10b981, #059669);
+                                border-radius:4px 4px 0 0;
+                                min-height:2px;
+                            "></div>
+                            <span style="font-size:10px;color:#6b7280;margin-top:4px;">${d.hour}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '--:--';
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function exportReport() {
+            addLog('جاري تصدير التقرير...', 'info');
+
+            // Generate report content
+            const reportContent = {
+                report_id: reportId,
+                generated_at: new Date().toISOString(),
+                // Add more report data
+            };
+
+            // Download as JSON (for demo)
+            const blob = new Blob([JSON.stringify(reportContent, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${reportId}.json`;
+            a.click();
+
+            addLog('تم تصدير التقرير بنجاح', 'success');
+        }
+    </script>
+</body>
+
+</html>

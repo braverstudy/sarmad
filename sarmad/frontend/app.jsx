@@ -148,6 +148,7 @@ const useWebSocket = (url) => {
 
             wsRef.current.onmessage = (event) => {
                 const data = JSON.parse(event.data);
+                console.log('[WS] Received:', data.type, data);
                 setLastMessage(data);
             };
 

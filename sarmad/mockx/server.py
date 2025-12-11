@@ -255,6 +255,11 @@ async def export_data():
 
 # Mount static files
 static_dir = os.path.dirname(__file__)
+pages_dir = os.path.join(static_dir, "pages")
+
+if os.path.exists(pages_dir):
+    app.mount("/pages", StaticFiles(directory=pages_dir, html=True), name="pages")
+
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -262,3 +267,4 @@ if os.path.exists(static_dir):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
+

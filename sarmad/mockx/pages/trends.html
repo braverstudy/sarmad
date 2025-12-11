@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الأكثر تداولاً | MockX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            color: #e7e9ea;
+        }
+
+        .app {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 275px;
+            padding: 0 12px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            border-left: 1px solid #2f3336;
+        }
+
+        .logo {
+            padding: 12px;
+            font-size: 30px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 12px;
+            border-radius: 30px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item.active {
+            font-weight: 700;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            border-left: 1px solid #2f3336;
+            border-right: 1px solid #2f3336;
+            min-height: 100vh;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 12px 16px;
+            border-bottom: 1px solid #2f3336;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #71767b;
+        }
+
+        /* Trends Grid */
+        .trends-container {
+            padding: 20px;
+        }
+
+        .trends-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .trend-card {
+            background: #16181c;
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .trend-card:hover {
+            background: #1c1f23;
+            border-color: #2f3336;
+        }
+
+        .trend-rank {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .rank-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d9bf0;
+        }
+
+        .rank-badge {
+            font-size: 12px;
+            color: #71767b;
+        }
+
+        .trend-tag {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #e7e9ea;
+        }
+
+        .trend-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #71767b;
+        }
+
+        .trend-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Chart Section */
+        .chart-section {
+            padding: 20px;
+            border-bottom: 1px solid #2f3336;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 20px 0;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(180deg, #1d9bf0, #0f7abf);
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            position: relative;
+        }
+
+        .chart-label {
+            text-align: center;
+            font-size: 11px;
+            color: #71767b;
+            margin-top: 8px;
+        }
+
+        /* Top Tweets */
+        .top-tweets {
+            padding: 20px;
+        }
+
+        .tweet {
+            padding: 16px;
+            border-bottom: 1px solid #2f3336;
+            display: flex;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .tweet:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tweet-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #1d9bf0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .tweet-content {
+            flex: 1;
+        }
+
+        .tweet-header {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .tweet-name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .tweet-username {
+            color: #71767b;
+            font-size: 15px;
+        }
+
+        .tweet-text {
+            font-size: 15px;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        .tweet-actions {
+            display: flex;
+            gap: 40px;
+            color: #71767b;
+            font-size: 13px;
+        }
+
+        .violation-badge {
+            background: rgba(244, 33, 46, 0.2);
+            color: #f4212e;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+
+        /* Sidebar Right */
+        .sidebar-right {
+            width: 350px;
+            padding: 12px 24px;
+        }
+
+        .info-box {
+            background: #16181c;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: #71767b;
+            line-height: 1.6;
+        }
+
+        .report-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #f4212e;
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 15px;
+        }
+
+        .report-btn:hover {
+            background: #dc1d29;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #71767b;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #2f3336;
+            border-top-color: #1d9bf0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">𝕏</div>
+            <nav>
+                <a href="../index.html" class="nav-item">
+                    <span>🏠</span> الرئيسية
+                </a>
+                <a href="search.html" class="nav-item">
+                    <span>🔍</span> البحث
+                </a>
+                <div class="nav-item active">
+                    <span>📈</span> الأكثر تداولاً
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="header">
+                <h1>📈 الأكثر تداولاً</h1>
+                <p>الهاشتاقات والمواضيع الرائجة الآن</p>
+            </div>
+
+            <!-- Volume Chart -->
+            <div class="chart-section">
+                <h2 class="section-title">📊 حجم التغريدات خلال اليوم</h2>
+                <div class="chart-container" id="chartContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trends Grid -->
+            <div class="trends-container">
+                <h2 class="section-title">🔥 الترندات الحالية</h2>
+                <div class="trends-grid" id="trendsGrid">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        جاري تحميل الترندات...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Tweets for Selected Trend -->
+            <div class="top-tweets" id="topTweets" style="display:none;">
+                <h2 class="section-title" id="tweetsSectionTitle">تغريدات الترند</h2>
+                <div id="tweetsList"></div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar-right">
+            <div class="info-box">
+                <div class="info-title">🛡️ رصد المحتوى المخالف</div>
+                <div class="info-text">
+                    إذا لاحظت محتوى مخالف للأنظمة، يمكنك الإبلاغ عنه مباشرة.
+                    سيتم تحويل بلاغك لفريق سرمد للتحقق والمتابعة.
+                </div>
+                <a href="../../reports-portal/index.html" class="report-btn">
+                    🚨 الإبلاغ عن محتوى مخالف
+                </a>
+            </div>
+
+            <div class="info-box">
+                <div class="info-title">ℹ️ حول الترندات</div>
+                <div class="info-text">
+                    يتم تحديث الترندات بشكل مستمر بناءً على حجم التفاعل
+                    والنشاط على المنصة خلال الساعات الأخيرة.
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        let allTrends = [];
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTrends();
+            loadVolume();
+        });
+
+        async function loadTrends() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v2/trends`);
+                const data = await response.json();
+                allTrends = data.data || [];
+                renderTrends(allTrends);
+            } catch (error) {
+                console.error('Error loading trends:', error);
+                document.getElementById('trendsGrid').innerHTML = `
+                    <div class="loading">⚠️ تعذر تحميل الترندات</div>
+                `;
+            }
+        }
+
+        async function loadVolume() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v2/volume`);
+                const data = await response.json();
+                renderChart(data.data || []);
+            } catch (error) {
+                console.error('Error loading volume:', error);
+            }
+        }
+
+        function renderTrends(trends) {
+            const container = document.getElementById('trendsGrid');
+
+            if (!trends || trends.length === 0) {
+                container.innerHTML = '<p style="color:#71767b">لا توجد ترندات حالياً</p>';
+                return;
+            }
+
+            container.innerHTML = trends.map((trend, index) => `
+                <div class="trend-card" onclick="showTrendTweets('${trend.tag}')">
+                    <div class="trend-rank">
+                        <span class="rank-number">${index + 1}</span>
+                        <span class="rank-badge">ترند في السعودية</span>
+                    </div>
+                    <div class="trend-tag">#${trend.tag}</div>
+                    <div class="trend-stats">
+                        <span class="trend-stat">🐦 ${trend.count} تغريدة</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderChart(data) {
+            const container = document.getElementById('chartContainer');
+            const maxCount = Math.max(...data.map(d => d.count), 1);
+
+            container.innerHTML = data.map(d => `
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+                    <div class="chart-bar" style="height:${(d.count / maxCount) * 160}px"></div>
+                    <span class="chart-label">${d.hour}</span>
+                </div>
+            `).join('');
+        }
+
+        async function showTrendTweets(tag) {
+            const section = document.getElementById('topTweets');
+            const title = document.getElementById('tweetsSectionTitle');
+            const list = document.getElementById('tweetsList');
+
+            section.style.display = 'block';
+            title.textContent = `تغريدات #${tag}`;
+            list.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    جاري تحميل التغريدات...
+                </div>
+            `;
+
+            // Scroll to tweets section
+            section.scrollIntoView({ behavior: 'smooth' });
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v2/tweets/search?query=%23${tag}&limit=20`);
+                const data = await response.json();
+                renderTweets(data.data || []);
+            } catch (error) {
+                console.error('Error loading tweets:', error);
+                list.innerHTML = `<div class="loading">⚠️ تعذر تحميل التغريدات</div>`;
+            }
+        }
+
+        function renderTweets(tweets) {
+            const container = document.getElementById('tweetsList');
+
+            if (!tweets || tweets.length === 0) {
+                container.innerHTML = `<div class="loading">لا توجد تغريدات</div>`;
+                return;
+            }
+
+            container.innerHTML = tweets.map(tweet => {
+                const hasViolation = tweet.is_source || tweet.violation_related;
+                return `
+                    <div class="tweet">
+                        <div class="tweet-avatar">👤</div>
+                        <div class="tweet-content">
+                            <div class="tweet-header">
+                                ${hasViolation ? '<span class="violation-badge">🚨 مخالفة</span>' : ''}
+                                <span class="tweet-name">${tweet.author?.name || 'مستخدم'}</span>
+                                <span class="tweet-username">${tweet.author?.username || '@user'}</span>
+                            </div>
+                            <div class="tweet-text">${tweet.text || ''}</div>
+                            <div class="tweet-actions">
+                                <span>💬 ${tweet.public_metrics?.reply_count || 0}</span>
+                                <span>🔄 ${tweet.public_metrics?.retweet_count || 0}</span>
+                                <span>❤️ ${tweet.public_metrics?.like_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+
+</html>
